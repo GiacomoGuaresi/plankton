@@ -1,53 +1,47 @@
-const { app, BrowserWindow, dialog, ipcMain } = require("electron");
-const fs = require("fs");
-const path = require("path");
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const path = require('path');
+const fs = require('fs');
 
-let mainWindow;
-
-app.whenReady().then(() => {
-  mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
+function createWindow() {
+  const win = new BrowserWindow({
+    width: 1200,
+    height: 800,
     webPreferences: {
-      nodeIntegration: true, // Permette di usare Node.js nel renderer
-      contextIsolation: false,
+      preload: path.join(__dirname, 'preload.js'),
+      nodeIntegration: false,
+      contextIsolation: true,
     },
   });
-
-  mainWindow.loadFile("index.html");
-});
-
-// Selezione file JSON
-ipcMain.handle("select-file", async () => {
-  const result = await dialog.showOpenDialog(mainWindow, {
-    properties: ["openFile"],
-    filters: [{ name: "JSON", extensions: ["json"] }],
-  });
-
-  if (!result.canceled && result.filePaths.length > 0) {
-    return result.filePaths[0];
-  }
-  return null;
-});
-
-// Legge e processa il file JSON e i parent
-ipcMain.handle("load-json", async (event, filePath) => {
-  if (!filePath) return null;
-
-  const folderPath = path.dirname(filePath);
-  return loadHierarchy(filePath, folderPath);
-});
-
-function loadHierarchy(filePath, folderPath, parentData = []) {
-  if (!fs.existsSync(filePath)) return parentData;
-
-  const rawData = fs.readFileSync(filePath);
-  const jsonData = JSON.parse(rawData);
-
-  if (jsonData.parent) {
-    const parentPath = path.join(folderPath, jsonData.parent);
-    return loadHierarchy(parentPath, folderPath, [jsonData, ...parentData]);
-  }
-
-  return [jsonData, ...parentData];
+  win.loadURL('http://localhost:5173');
 }
+
+app.whenReady().then(createWindow);
+
+ipcMain.handle('open-json-file', async () => {
+  const result = await dialog.showOpenDialog({
+    filters: [{ name: 'JSON', extensions: ['json'] }],
+    properties: ['openFile'],
+  });
+  if (result.canceled) return null;
+  return result.filePaths[0];
+});
+
+ipcMain.handle('load-config-chain', async (_event, filePath) => {
+  const chain = [];
+  let currentPath = filePath;
+
+  while (currentPath) {
+    const data = JSON.parse(fs.readFileSync(currentPath, 'utf-8'));
+    chain.unshift({ file: path.basename(currentPath), data }); // inserisce all'inizio
+
+    if (!data.inherits) break;
+
+    const parentName = data.inherits + '.json';
+    const parentPath = path.resolve(path.dirname(currentPath), parentName);
+    if (!fs.existsSync(parentPath)) break;
+
+    currentPath = parentPath;
+  }
+
+  return chain;
+});

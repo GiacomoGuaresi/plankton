@@ -1,17 +1,18 @@
 {
-  "name": "plankton",
-  "version": "1.0.0",
-  "main": "main.js",
-  "scripts": {
-    "start": "electron ."
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
-  "dependencies": {
-    "bootstrap": "^5.3.3",
-    "electron": "^35.0.3",
-    "jquery": "^3.7.1"
-  }
+    "name": "orcaslicer-config-viewer",
+    "main": "main.js",
+    "scripts": {
+        "dev": "concurrently \"electron . \" \"vite\"",
+        "start": "electron ."
+    },
+    "devDependencies": {
+        "@vitejs/plugin-react": "^4.4.0",
+        "concurrently": "^9.1.2",
+        "electron": "^29.0.0",
+        "vite": "^6.3.1"
+    },
+    "dependencies": {
+        "react": "^18.0.0",
+        "react-dom": "^18.0.0"
+    }
 }
